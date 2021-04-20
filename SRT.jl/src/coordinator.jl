@@ -56,7 +56,6 @@ function main(args)
   end
 
   @info "coordinator shutting down"
-  #unsubscribe(sub, "srtstatus")
   disconnect(sub)
   disconnect(redis)
 end
