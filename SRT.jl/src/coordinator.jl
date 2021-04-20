@@ -34,7 +34,8 @@ function update_status(redis, json)
   publish(redis, "srt://blc01/0/set", "OBSFREQ=$(obsfreq0 + 2*187.5)")
 end
 
-function main(redishost="redishost")
+function main(args)
+  redishost = get(ENV, "REDISHOST", "redishost")
   redis = RedisConnection(host=redishost)
   sub = open_subscription(redis)
   subscribe(sub, "srtstatus", m->update_status(redis, m))
