@@ -3,19 +3,18 @@
 #hosts="blc00 blc01"
 hosts="blc00"
 
-function circus_fg() {
-  command=$1
-  watcher=$2
-  shift 2
+function circus_status() {
+  watcher=$1
+  shift 1
 
   for host in "${@}"
   do
     echo -n "$host $watcher "
-    circusctl --endpoint tcp://${host}:5555 $command srt_$watcher
+    circusctl --endpoint tcp://${host}:5555 status srt_$watcher
   done
 }
 
-function circus_bg() {
+function circus_cmd() {
   command=$1
   watcher=$2
   shift 2
@@ -25,6 +24,8 @@ function circus_bg() {
     circusctl --endpoint tcp://${host}:5555 $command srt_$watcher >& /dev/null --waiting &
   done
   wait
+
+  circus_status $watcher "${@}"
 }
 
 function start_fpga() {
@@ -61,8 +62,11 @@ case $object in
 
   status|coordinator)
     case $command in
-      start|stop|status)
-        circus_fg $command $object blh0
+      start|stop)
+        circus_cmd $command $object blh0
+        ;;
+      status)
+        circus_status $object blh0
         ;;
       *)
         help
@@ -73,11 +77,10 @@ case $object in
   hashpipe|redisgw)
     case $command in
       start|stop)
-        circus_bg $command $object ${hosts:-blc00 blc01}
-        circus_fg status $object ${hosts:-blc00 blc01}
+        circus_cmd $command $object ${hosts:-blc00 blc01}
         ;;
       status)
-        circus_fg $command $object ${hosts:-blc00 blc01}
+        circus_status $object ${hosts:-blc00 blc01}
         ;;
       *)
         help
