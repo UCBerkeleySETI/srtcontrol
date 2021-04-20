@@ -103,11 +103,11 @@ end
 run_client(port=54000; redishost="redishost") = run_client(ip"127.0.0.1", port; redishost=redishost)
 
 function run_client(host::AbstractString,
-                    port::AbstractString,
+                    port::AbstractString;
                     redishost="redishost")
   h = getaddrinfo(host, IPv4)
   p = parse(Int, port)
-  run_client(h, p, redishost)
+  run_client(h, p; redishost=redishost)
 end
 
 function main(args)
