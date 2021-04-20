@@ -1,0 +1,12 @@
+name = "SRT"
+uuid = "de9f407e-815e-4c8a-87bf-2f276b916af0"
+authors = ["David MacMahon <davidm@astro.berkeley.edu>"]
+version = "0.1.0"
+
+[deps]
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+RadioInterferometry = "d7a65883-3b66-4fe4-a274-f0f417c4cddf"
+Redis = "0cf705f9-a9e2-50d1-a699-2b372a39b750"
+Sockets = "6462fe0b-24de-5631-8697-dd941f90decc"

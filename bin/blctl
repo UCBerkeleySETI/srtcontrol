@@ -1,0 +1,102 @@
+#!/bin/bash
+
+#hosts="blc00 blc01"
+hosts="blc00"
+
+function circus_fg() {
+  command=$1
+  watcher=$2
+  shift 2
+
+  for host in "${@}"
+  do
+    echo -n "$host $watcher "
+    circusctl --endpoint tcp://${host}:5555 $command srt_$watcher
+  done
+}
+
+function circus_bg() {
+  command=$1
+  watcher=$2
+  shift 2
+
+  for host in "${@}"
+  do
+    circusctl --endpoint tcp://${host}:5555 $command srt_$watcher >& /dev/null --waiting &
+  done
+  wait
+}
+
+function start_fpga() {
+  bash <<EOF
+  source /opt/virtualenv/casper/bin/activate
+  echo dibas_init.rb
+  type calibrate_adc5g_mmcm.py
+EOF
+}
+
+function help() {
+  echo "blctl {start|stop|status} {status|coordinator|hashpipe|redisgw} [hosts]"
+  echo "blctl start fpga"
+}
+
+# Parse command line
+command=$1
+object=$2
+shift 2
+hosts="${@}"
+
+# For given object, do command
+case $object in
+  fpga)
+    case $command in
+      start)
+        start_fpga
+        ;;
+      *)
+        help
+        ;;
+    esac
+    ;;
+
+  status|coordinator)
+    case $command in
+      start|stop|status)
+        circus_fg $command $object blh0
+        ;;
+      *)
+        help
+        ;;
+    esac
+    ;;
+
+  hashpipe|redisgw)
+    case $command in
+      start|stop)
+        circus_bg $command $object ${hosts:-blc00 blc01}
+        circus_fg status $object ${hosts:-blc00 blc01}
+        ;;
+      status)
+        circus_fg $command $object ${hosts:-blc00 blc01}
+        ;;
+      *)
+        help
+        ;;
+    esac
+    ;;
+
+  all)
+    case $command in
+      start|stop|status)
+      echo "object 'all' not yet supported"
+      ;;
+      *)
+        help
+        ;;
+    esac
+    ;;
+
+  *)
+    help
+    ;;
+esac
