@@ -13,25 +13,40 @@ using RadioInterferometry
 function update_status(redis, json)
   status = JSON.parse(json)
 
-  values = [
-            "SRC_NAME=$(status["source"])",
-            "RA=$(round(hms2ha(status["ra"])*15, digits=6))",
-            "RA_STR=$(status["ra"])",
-            "DEC=$(round(dms2deg(status["dec"]), digits=6))",
-            "DEC_STR=$(status["dec"])",
-            "FRONTEND=$(status["rcvr"])"
-           ]
+  values = []
+
+  if haskey(status, "source")
+    push!(values, "SRC_NAME=$(status["source"])")
+  end
+  if haskey(status, "ra")
+    push!(values, "RA=$(round(hms2ha(status["ra"])*15, digits=6))")
+    push!(values, "RA_STR=$(status["ra"])")
+  end
+  if haskey(status, "dec")
+    push!(values, "DEC=$(round(dms2deg(status["dec"]), digits=6))")
+    push!(values, "DEC_STR=$(status["dec"])")
+  end
+  if haskey(status, "rcvr")
+    push!(values, "FRONTEND=$(status["rcvr"])")
+  end
+  if haskey(status, "motion")
+    push!(values, "TRK_MODE=$(status["motion"])")
+  end
 
   @debug values
 
-  publish(redis, "srt:///set", join(values, "\n"))
+  if !isempty(values)
+    publish(redis, "srt:///set", join(values, "\n"))
+  end
 
-  # Complete hack for now...
-  lofreq = status["lofreq"]
-  obsfreq0 = lofreq + 187.5 / 64 * 31.5
+  if haskey(status, "lofreq")
+    # Complete hack for now...
+    lofreq = status["lofreq"]
+    obsfreq0 = lofreq + 187.5 / 64 * 31.5
 
-  publish(redis, "srt://blc00/0/set", "OBSFREQ=$(obsfreq0 + 1*187.5)")
-  publish(redis, "srt://blc01/0/set", "OBSFREQ=$(obsfreq0 + 2*187.5)")
+    publish(redis, "srt://blc00/0/set", "OBSFREQ=$(obsfreq0 + 1*187.5)")
+    publish(redis, "srt://blc01/0/set", "OBSFREQ=$(obsfreq0 + 2*187.5)")
+  end
 end
 
 function main(args)
