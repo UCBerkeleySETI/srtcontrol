@@ -37,7 +37,7 @@ EOF
 }
 
 function help() {
-  echo "blctl {start|stop|status} {status|coordinator|hashpipe|redisgw} [hosts]"
+  echo "blctl {start|stop|status} {all|status|coordinator|hashpipe|redisgw} [hosts]"
   echo "blctl start fpga"
 }
 
@@ -90,9 +90,24 @@ case $object in
 
   all)
     case $command in
-      start|stop|status)
-      echo "object 'all' not yet supported"
+      start)
+        circus_cmd start  status      blh0
+        circus_cmd start  coordinator blh0
+        circus_cmd start  hashpipe    blc00 blc01
+        circus_cmd start  redisgw     blc00 blc01
+        ;;
+      stop)
+        circus_cmd stop   redisgw     blc00 blc01
+        circus_cmd stop   hashpipe    blc00 blc01
+        circus_cmd stop   coordinator blh0
+        circus_cmd stop   status      blh0
       ;;
+      status)
+        circus_status status      blh0
+        circus_status coordinator blh0
+        circus_status hashpipe    blc00 blc01
+        circus_status redisgw     blc00 blc01
+        ;;
       *)
         help
         ;;
