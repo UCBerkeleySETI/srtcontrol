@@ -15,9 +15,9 @@ function update_status(redis, json)
 
   values = [
             "SRC_NAME=$(status["source"])",
-            "RA=$(round(hms2h(status["ra"])*15, digits=6))",
+            "RA=$(round(hms2ha(status["ra"])*15, digits=6))",
             "RA_STR=$(status["ra"])",
-            "DEC=$(round(dms2d(status["dec"]), digits=6))",
+            "DEC=$(round(dms2deg(status["dec"]), digits=6))",
             "DEC_STR=$(status["dec"])",
             "FRONTEND=$(status["rcvr"])"
            ]
