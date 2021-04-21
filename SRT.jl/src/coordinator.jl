@@ -10,10 +10,57 @@ using Redis
 using JSON
 using RadioInterferometry
 
-function update_status(redis, json)
+# Vector of Tuples containing (instances, sub-band factor)
+const INSTANCES = [("blc00/0", 1), ("blc01/0", 2)]
+
+function do_start(redis)
+  values = String[]
+
+  # Get synctime from redis
+  synctime = get(redis, "sync_time")
+  if synctime === nothing
+    @warn "sync_time not found in redis"
+  else
+    push!(values, "SYNCTIME=$(synctime)")
+  end
+
+  # Use blc00 PKTIDX as representative value for all nodes
+  pktidx_str = hget(redis, "srt://$(INSTANCES[1][1])/status", "PKTIDX")
+  pktidx=something(tryparse(Int64, pktidx_str))
+  @show pktidx
+
+  # Set PKTSTART to future value.  pktidx is already as much as 1 second old,
+  # so go 10 blocks into the future (~1.8 seconds from ~1 second ago == ~0.8
+  # seconds into the future).
+  # TODO Make this lead block count configurable
+  lead_blocks = 10
+  # TODO Read PIPERBLK from status buffer
+  piperblk = 16384
+  pktstart = pktidx + lead_blocks * piperblk
+  push!(values, "PKTSTART=$(pktstart)")
+  # Set dwell to 3600 seconds as safety switch
+  # (will normally stop recording when track ends).
+  dwell = 3600
+  push!(values, "DWELL=$dwell")
+
+  @info "scan start: setting PKTSTART=$pktstart DWELL=$dwell"
+
+  # Publish start conditions
+  publish(redis, "srt:///set", join(values, "\n"))
+end
+
+function do_stop(redis)
+  @info "scan stop: setting PKTSTART=0 DWELL=0"
+
+  # Publish start conditions
+  publish(redis, "srt:///set", "PKTSTART=0\nDWELL=0")
+end
+
+function update_status(redis, oldmotion, json)
   status = JSON.parse(json)
 
-  values = []
+  values = String[]
+  startstop = :noop
 
   if haskey(status, "source")
     push!(values, "SRC_NAME=$(status["source"])")
@@ -30,7 +77,25 @@ function update_status(redis, json)
     push!(values, "FRONTEND=$(status["rcvr"])")
   end
   if haskey(status, "motion")
-    push!(values, "TRK_MODE=$(status["motion"])")
+    motion = status["motion"]
+    push!(values, "TRK_MODE=$(motion)")
+
+    # Special case to avoid recording while "TRACKING" the "source" known as
+    # `BeamPark`.  Basically treat it as a separate motion state `BeamPark`.
+    if motion == "TRACKING" && status["source"] == "BeamPark"
+      motion = "BeamPark"
+    end
+
+    # Handle changes in motion state
+    # Tracking to non-tracking => stop recording
+    # Non-tracking to tracking => start recording
+    if motion != oldmotion[]
+      startstop = oldmotion[] == "TRACKING" ? :stop  :
+                     motion   == "TRACKING" ? :start : :noop
+      @info "motion changed: $(oldmotion[]) -> $(motion) [$(startstop)]"
+      # Remember current motion state
+      oldmotion[] = motion
+    end
   end
 
   @debug values
@@ -44,16 +109,24 @@ function update_status(redis, json)
     lofreq = status["lofreq"]
     obsfreq0 = lofreq + 187.5 / 64 * 31.5
 
-    publish(redis, "srt://blc00/0/set", "OBSFREQ=$(obsfreq0 + 1*187.5)")
-    publish(redis, "srt://blc01/0/set", "OBSFREQ=$(obsfreq0 + 2*187.5)")
+    for (instance, subband) in INSTANCES
+      publish(redis,
+              "srt://$(instance)/set", "OBSFREQ=$(obsfreq0 + subband*187.5)")
+    end
   end
+
+  startstop == :start && do_start(redis)
+  startstop == :stop  && do_stop(redis)
+
+  nothing
 end
 
 function main(args)
   redishost = get(ENV, "REDISHOST", "redishost")
   redis = RedisConnection(host=redishost)
   sub = open_subscription(redis)
-  subscribe(sub, "srtstatus", m->update_status(redis, m))
+  oldmotion = Ref{String}("NA")
+  subscribe(sub, "srtstatus", m->update_status(redis, oldmotion, m))
 
   # Allow CTRL-C to generate InterruptException (requires Julia >= v1.5.0)
   Base.exit_on_sigint(false)
