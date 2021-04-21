@@ -25,11 +25,12 @@ function circus_cmd() {
   circus_status $watcher "${@}"
 }
 
+# User can export CASPER_VIRTUALENV to point to custom virtual environment
 function start_fpga() {
   bash <<EOF
-  source /opt/virtualenv/casper/bin/activate
-  dibas_init.rb r0
-  calibrate_adc5g_mmcm.py r0
+  source "${CASPER_VIRTUALENV:-/opt/virtualenv/casper}/bin/activate"
+  dibas_init.rb ${1:-r0}
+  calibrate_adc5g_mmcm.py ${1:-r0}
 EOF
 }
 
@@ -49,7 +50,7 @@ case $object in
   fpga)
     case $command in
       start)
-        start_fpga
+        start_fpga "${hosts[0]}"
         ;;
       *)
         help
