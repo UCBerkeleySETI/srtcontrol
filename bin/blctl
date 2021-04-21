@@ -28,8 +28,8 @@ function circus_cmd() {
 function start_fpga() {
   bash <<EOF
   source /opt/virtualenv/casper/bin/activate
-  echo dibas_init.rb
-  type calibrate_adc5g_mmcm.py
+  dibas_init.rb r0
+  calibrate_adc5g_mmcm.py r0
 EOF
 }
 
