@@ -1,8 +1,5 @@
 #!/bin/bash
 
-#hosts="blc00 blc01"
-hosts="blc00"
-
 function circus_status() {
   watcher=$1
   shift 1
