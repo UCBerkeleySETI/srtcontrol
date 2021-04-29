@@ -65,6 +65,14 @@ function update_status(redis, oldmotion, json)
   if haskey(status, "source")
     push!(values, "SRC_NAME=$(status["source"])")
   end
+  if haskey(status, "azobs")
+    azobs = tryparse(Float64, status["azobs"])
+    azobs !== nothing && push!(values, "AZ=$azobs")
+  end
+  if haskey(status, "elobs")
+    elobs = tryparse(Float64, status["elobs"])
+    elobs !== nothing && push!(values, "El=$elobs")
+  end
   if haskey(status, "ra")
     push!(values, "RA=$(round(hms2ha(status["ra"])*15, digits=6))")
     push!(values, "RA_STR=$(status["ra"])")
