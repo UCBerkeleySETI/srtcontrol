@@ -24,10 +24,13 @@ function do_start(redis)
     push!(values, "SYNCTIME=$(synctime)")
   end
 
+  # Get SRC_NAME from redis (for info message)
+  src_name = hget(redis, "srt://$(INSTANCES[1][1])/status", "SRC_NAME")
+
   # Use blc00 PKTIDX as representative value for all nodes
   pktidx_str = hget(redis, "srt://$(INSTANCES[1][1])/status", "PKTIDX")
   pktidx=something(tryparse(Int64, pktidx_str))
-  @show pktidx
+  #@show pktidx
 
   # Set PKTSTART to future value.  pktidx is already as much as 1 second old,
   # so go 10 blocks into the future (~1.8 seconds from ~1 second ago == ~0.8
@@ -43,7 +46,7 @@ function do_start(redis)
   dwell = 3600
   push!(values, "DWELL=$dwell")
 
-  @info "scan start: setting PKTSTART=$pktstart DWELL=$dwell"
+  @info "scan start $src_name: setting PKTSTART=$pktstart DWELL=$dwell"
 
   # Publish start conditions
   publish(redis, "srt:///set", join(values, "\n"))
