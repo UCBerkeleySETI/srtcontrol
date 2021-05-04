@@ -130,12 +130,20 @@ function update_status(redis, oldmotion, json)
   nothing
 end
 
+function update_status_trycatch(redis, oldmotion, json)
+  try
+    update_status_trycatch(redis, oldmotion, json)
+  catch ex
+    @error "error updating status" exception=ex
+  end
+end
+
 function main(args)
   redishost = get(ENV, "REDISHOST", "redishost")
   redis = RedisConnection(host=redishost)
   sub = open_subscription(redis)
   oldmotion = Ref{String}("NA")
-  subscribe(sub, "srtstatus", m->update_status(redis, oldmotion, m))
+  subscribe(sub, "srtstatus", m->update_status_trycatch(redis, oldmotion, m))
 
   # Allow CTRL-C to generate InterruptException (requires Julia >= v1.5.0)
   Base.exit_on_sigint(false)
