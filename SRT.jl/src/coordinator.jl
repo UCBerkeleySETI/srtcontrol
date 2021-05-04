@@ -95,16 +95,27 @@ function update_status(redis, oldmotion, json)
       motion = "BeamPark"
     end
 
-    # Handle changes in motion state
-    # Tracking to non-tracking => stop recording
-    # Non-tracking to tracking => start recording
-    if motion != oldmotion[]
-      startstop = oldmotion[] == "TRACKING" ? :stop  :
-                     motion   == "TRACKING" ? :start : :noop
-      @info "motion changed: $(oldmotion[]) -> $(motion) [$(startstop)]"
-      # Remember current motion state
-      oldmotion[] = motion
+    # Ignore SLEWING if error is less that 0.01 degrees
+    el = get(status, 0)
+    azerr = get(status, 1) # if missing, assume a large
+    elerr = get(status, 1) # error to assume slew is real
+    err = hypot(azerr * cosd(el), elerr)
+
+    if motion == "SLEWING" && err < 0.01
+      @info "ignoring slewing with error < 0.01 degrees"
+    else
+      # Handle changes in motion state
+      # Tracking to non-tracking => stop recording
+      # Non-tracking to tracking => start recording
+      if motion != oldmotion[]
+        startstop = oldmotion[] == "TRACKING" ? :stop  :
+                       motion   == "TRACKING" ? :start : :noop
+        @info "motion changed: $(oldmotion[]) -> $(motion) [$(startstop)]"
+        # Remember current motion state
+        oldmotion[] = motion
+      end
     end
+
   end
 
   @debug values
