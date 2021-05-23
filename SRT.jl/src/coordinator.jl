@@ -41,9 +41,9 @@ function do_start(redis)
   piperblk = 16384
   pktstart = pktidx + lead_blocks * piperblk
   push!(values, "PKTSTART=$(pktstart)")
-  # Set dwell to 3600 seconds as safety switch
+  # Set dwell to 7200 seconds as safety switch
   # (will normally stop recording when track ends).
-  dwell = 3600
+  dwell = 7200
   push!(values, "DWELL=$dwell")
 
   @info "scan start $src_name: setting PKTSTART=$pktstart DWELL=$dwell"
