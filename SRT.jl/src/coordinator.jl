@@ -96,9 +96,9 @@ function update_status(redis, oldmotion, json)
     end
 
     # Ignore SLEWING if error is less that 0.01 degrees
-    el = get(status, 0)
-    azerr = get(status, 1) # if missing, assume a large
-    elerr = get(status, 1) # error to assume slew is real
+    el = get(status, "el", 0)
+    azerr = get(status, "azerr", 1) # if missing, assume a large
+    elerr = get(status, "elerr", 1) # error to assume slew is real
     err = hypot(azerr * cosd(el), elerr)
 
     if motion == "SLEWING" && err < 0.01
@@ -143,7 +143,7 @@ end
 
 function update_status_trycatch(redis, oldmotion, json)
   try
-    update_status_trycatch(redis, oldmotion, json)
+    update_status(redis, oldmotion, json)
   catch ex
     @error "error updating status" exception=ex
   end
